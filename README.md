@@ -1,5 +1,5 @@
 # ahcg_pipeline
-Variant calling pipeline for genomic data analysis
+Variant calling pipeline for genomic data analysis 9/12/2016
 
 ## Requirements
 
