@@ -1,0 +1,565 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1404\cocoasubrtf470
+{\fonttbl\f0\fmodern\fcharset0 Courier;\f1\fmodern\fcharset0 Courier-Bold;\f2\fnil\fcharset0 Menlo-Regular;
+}
+{\colortbl;\red255\green255\blue255;\red255\green0\blue0;\red27\green29\blue31;\red255\green255\blue0;
+\red0\green0\blue0;}
+\margl1440\margr1440\vieww16660\viewh12860\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs26 \cf0 \CocoaLigature0 login: ssh vagrant@localhost -p2222\
+password: vagrant\
+cd ahcg_pipeline\
+\
+# ahcg_pipeline\
+## 
+\f1\b Variant calling pipeline for genomic data analysis
+\f0\b0 \
+\
+## Requirements\
+\
+1. [Python3 - version 3.4.1](https://www.python.org/download/releases/3.4.1/)\
+2. [Trimomatic - version 0.36](http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-0.36.zip)\
+3. [Bowtie2 - version 2.2.9](https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.2.9/)\
+4. [Picard tools - version 2.6.0](https://github.com/broadinstitute/picard/releases/download/2.6.0/picard.jar)\
+5. [GATK - version 3.4](https://software.broadinstitute.org/gatk/download/)\
+\
+## Reference genome\
+\
+Reference genomes can be downloaded from [Illumina iGenomes](http://support.illumina.com/sequencing/sequencing_software/igenome.html)\
+\
+## Test data download\
+\
+Use the following protocol to download and prepare test dataset from NIST sample NA12878\
+\
+	```\{sh\}\
+	wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/Garvan_NA12878_HG001_HiSeq_Exome/	NIST7035_TAAGGCGA_L001_R1_001.fastq.gz\
+	wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/Garvan_NA12878_HG001_HiSeq_Exome/	NIST7035_TAAGGCGA_L001_R2_001.fastq.gz\
+	gunzip NIST7035_TAAGGCGA_L001_R1_001.fastq.gz\
+	gunzip NIST7035_TAAGGCGA_L001_R2_001.fastq.gz\
+	head -100000 NIST7035_TAAGGCGA_L001_R1_001.fastq > test_r1.fastq\
+	head -100000 NIST7035_TAAGGCGA_L001_R2_001.fastq > test_r2.fastq	```\
+\
+## Help\
+\
+To access help use the following command:\
+\
+```\{sh\}\
+python3 ahcg_pipeline.py -h\
+```\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qc\partightenfactor0
+
+\f1\b \cf0 Git
+\f0\b0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf0 \
+###### Setting up github account (Changing the git URL from Shashi\'92s to mine)\
+My github folder Somineni21 was forked from shashidhar22/ahcg_pipeline. Then the URL (obtained by clicking on the \'93clone or download\'94) was changed from \'93https://github.com/shashidhar22/ahcg_pipeline.git\'94 to \'93https://github.com/Somineni21/ahcg_pipeline.git\'94\
+\
+## Set up pipeline dependencies\
+- Download reference genome and dbSNP \
+\
+\pard\pardeftab720\partightenfactor0
+\cf0 \expnd0\expndtw0\kerning0
+\CocoaLigature1 	```\{sh\}\
+	wget www.prism.gatech.edu/~sravishankar9/resources.tar.gz\
+	tar -zxvf ./resources.tar.gz\
+	gunzip ./resources/dbsnp/dbsnp_138.hg19.vcf.gz\
+	```\
+\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab720\pardirnatural\partightenfactor0
+\cf0 ## To ignore the unwanted files from pushing into the github\
+go to vi .gitignore,\
+\
+then add the name of the file/folder/directory to the list and save it. So next time when you push your stuff to the course (master) github repository, all the stuff under the .gitignore will be excluded\
+\
+## TO add files to git repository\
+\pard\pardeftab720\partightenfactor0
+\cf0 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \
+	```\{sh\}\
+	git add <filename>\
+ 	git commit -m <"commit message">\
+ 	git push origin master\
+	```\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab720\pardirnatural\partightenfactor0
+
+\f1\b \cf0 \
+\pard\pardeftab720\qc\partightenfactor0
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 STEP I: TO CALL VARIANTS (GENERATING VCF FILE)\
+\
+\pard\pardeftab720\partightenfactor0
+\cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 To be able to call variants, we need to create 3 Extra files using the ref genome file, hg19.fa as input file \
+\pard\pardeftab720\partightenfactor0
+
+\f0\b0 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f1\b \cf0 NOTE:
+\f0\b0  All the below files (3) were made using the ref genome file, hg19.fa as input file\
+\
+
+\f1\b ** 1
+\f0\b0 . 
+\f1\b Genome index file - Indexing the reference genome using _samtools faidx_ **\
+\
+	
+\f0\b0 \'91\'92\'92\{sh\}\
+	\expnd0\expndtw0\kerning0
+\CocoaLigature1 samtools faidx <path to ref.fa>\
+	\'91\'92\'92\
+
+\f1\b \kerning1\expnd0\expndtw0 \CocoaLigature0 \
+** 2. Genome dictionary - Building genome.dict file using _Picard tools_ **\
+\
+	
+\f0\b0 \'91\'92\'92\{sh\}\
+	\expnd0\expndtw0\kerning0
+\CocoaLigature1 java -jar picard.jar CreateSequenceDictionary R=ref.fa O=ref.dict\
+	\'91\'92\'92\
+
+\f1\b \kerning1\expnd0\expndtw0 \CocoaLigature0 NOTE
+\f0\b0 : _-java don\'92t need path as long as you have it somewhere on your local machine. However, picard.jar needs to be given the path_\
+
+\f1\b \
+** 3. Bowtie index file - using _bowtie2/bowtie2-build_ **\
+\
+	
+\f0\b0 \'91\'92\'92\{sh\}\
+	\expnd0\expndtw0\kerning0
+\CocoaLigature1 bowtie2-build <path to ref.fa> <output prefix>\
+	\'91\'92\'92\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\
+** 1. Genome index file **\
+This file is needed for the GATK (it informs GATK, about the position of your read in the reference genome).\
+In order to make the Genome index file we need samtools:\
+\
+** Downloading & Installing samtools **\
+\
+Samtools were downloaded from the respective website and were installed using the following commands:\
+\
+	\'91\'92\'92\{sh\}\
+	./configure\
+	make\
+	make install\
+	\'91\'92\'92\
+Then using the samtools, the ref genome file: hg19.fa was indexed and saved as hg19.fi.fasta by using the command: \
+\
+	\'91\'92\'92\{sh\}\
+	/path/to/samtools-1.3.1/samtools faidx hg19.fa\
+	\'91\'92\'92\
+\pard\pardeftab720\partightenfactor0
+\cf0 ** 2. Genome dictionary **\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf0 This file is needed for the GATK (this file tells GATK, what the length of the ref genome, start and end positions of all the chromosomes etc).\
+\
+In order to make the Genome dictionary, we need Picard tools (provided by Shashi)\
+\
+- Creating genome dictionary file using Picard tools\
+\
+Genome dictionary of the ref genome, hg19.fa was created using the Picard tools as follows:\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab720\ri0\partightenfactor0
+\cf0 \CocoaLigature1 ahcg_pipeline/resources/genome$ java -jar ../../lib picard.jar CreateSequenceDictionary R=hg19.fa O=hg19_reference.dict\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf0 \CocoaLigature0 3. Bowtie index file\
+
+\f1\b NOTE: 
+\f0\b0 This file is needed for the samtools. It informs samtools that the following read is in line X of the ref genome index - not sure, check with Shashi?\
+\
+Prebuilt Bowtie index files are available, however, I couldn\'92t use it cause it was not compatible with the hg19 ref genome version.\
+To circumvent the issue, I got the appropriate bowtie indexed files from Wilson (flash drive - copied on to my desktop). Then I moved it from my desktop to the remote server (vagrant) using the following command:\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf3 \CocoaLigature1 	\'91\'92\'92\{sh\}\
+	rsync -av -e 'ssh -p 2222' ./Desktop/bowtie_index vagrant@localhost:~/ahcg_pipeline/\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab720\ri0\partightenfactor0
+\cf0 	\'91\'92\'92\
+## \CocoaLigature0 Running the .py script to call variants\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf0 Since I now have all the required files in the right place, I then ran Shashi\'92s .py script as follows:\
+\
+	\'91\'92\'92\{sh\}\
+	/home/vagrant/ahcg_pipeline/lib/Python3/bin/python3.4 ahcg_pipeline.py -t /home/vagrant/ahcg_pipeline/lib/	Trimmomatic-0.36/trimmomatic-0.36.jar -b /home/vagrant/ahcg_pipeline/lib/bowtie2-2.2.9/bowtie2 -p /home/vagrant/	ahcg_pipeline/lib/picard.jar -g /home/vagrant/ahcg_pipeline/lib/GenomeAnalysisTK.jar -i /home/vagrant/	ahcg_pipeline/resources/testdata/test_r1.fastq /home/vagrant/ahcg_pipeline/resources/testdata/test_r2.fastq -w /	home/vagrant/ahcg_pipeline/resources/bowtie_index/hg19 -d /home/vagrant/ahcg_pipeline/resources/dbsnp/	dbsnp_138.hg19.vcf -r /home/vagrant/ahcg_pipeline/resources/genome/hg19.fa -a /home/vagrant/ahcg_pipeline/lib/	Trimmomatic-0.36/adapters/NexteraPE-PE.fa -o /home/vagrant/ahcg_pipeline/out/\
+	\'91\'92\'92\
+\
+
+\f1\b 09/08/2016 Comparing my variants to a gold standard (from Genome in a Bottle)
+\f0\b0 \
+## __NA12878__\
+\
+Downloaded all the 4 Bam files (from the same subject, NA12878, sequenced at 4 different times) from \'93https://github.com/genome-in-a-bottle/giab_data_indexes/blob/master/NA12878 alignment.index.NA12878_HiSeq_Exome_Garvan_GRCh37_09252015\'94\
+\
+	\'91\'92\'92\{sh\}\
+	wget file.name\
+	\'91\'92\'92\
+Then all the 4 files were merged to increase the number of reads which thus improves the accuracy of variant calling by using the command\
+\
+	\'91\'92\'92\{sh\}\
+	samtools merge <output.bam> <input.bam1> \'85\'85 <input.bamN>\
+	\'91\'92\'92\
+Extracting reads mapping to a region of interest (BRCA1, using genomic coordinates as BED file)\
+\
+	\'91\'92\'92\{sh\}\
+	samtools view -L <bed file> -b -o <output bam file> <input bam file>\
+	\'91\'92\'92\
+Note: _-b just specifies that the output needs to be a bam file_\
+\
+\pard\pardeftab720\partightenfactor0
+\cf0 Then the output.bam file from above (BRCA1 region extracted from the merged bam file) is then converted to fastq using bedtools\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf0 \
+	```\{sh\}\
+	bedtools bamtofastq -i <input file.bam> -fq <output file.fastq>\
+	```\
+\pard\pardeftab720\partightenfactor0
+\cf0 \expnd0\expndtw0\kerning0
+\CocoaLigature1 To download bedtools\
+	\
+	```\{sh\}\
+	wget https://github.com/arq5x/bedtools2/releases/download/v2.25.0/bedtools-2.25.0.tar.gz\
+	tar -zxvf bedtools-2.25.0.tar.gz\
+	cd bedtools2\
+	make\
+	```\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf0 ## __Create ssh key for github__\
+\
+	```\{sh\}\
+	ssh -add ~/.ssh/id_rsa\
+	cd ~/.ssh/\
+	vi id_rsa.pub\
+	```\
+copy the ssh key into your github account\
+follow instructions at:\
+https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/\
+\
+\
+	```\{sh\}\
+	/home/vagrant/ahcg_pipeline/lib/Python3/bin/python3.4 ahcg_pipeline.py -t /home/vagrant/ahcg_pipeline/lib/	Trimmomatic-0.36/trimmomatic-0.36.jar -b /home/vagrant/ahcg_pipeline/lib/bowtie2-2.2.9/bowtie2 -p /home/vagrant/	ahcg_pipeline/lib/picard.jar -g /home/vagrant/ahcg_pipeline/lib/GenomeAnalysisTK.jar -i /home/vagrant/	ahcg_pipeline/resources/synthetic_data/reads_B1_27000x150bp_0S_0I_0D_0U_0N_1.fq /home/vagrant/ahcg_pipeline/	resources/synthetic_data/reads_B1_27000x150bp_0S_0I_0D_0U_0N_2.fq -w /home/vagrant/ahcg_pipeline/resources/	genome/chr17_ref_bowtie_indexed -d /home/vagrant/ahcg_pipeline/resources/dbsnp/dbsnp_138.hg19.vcf -r /home/	vagrant/ahcg_pipeline/resources/genome/chr17.fa -a /home/vagrant/ahcg_pipeline/lib/Trimmomatic-0.36/adapters/	NexteraPE-PE.fa -o /home/vagrant/ahcg_pipeline/out/\
+	```\
+	```\{sh\}\
+	/ahcg_pipeline/lib/samtools-1.3.1/samtools faidx /ahcg_pipeline/resources/genome/chr17.fa\
+	```\
+\
+	```\{sh\}\
+	java -jar ./lib/picard.jar CreateSequenceDictionary R=./resources/genome/chr17.fa O=chr17.dict\
+	```\
+\
+	```\{sh\}\
+	./lib/bowtie2-2.2.9/bowtie2 ./resources/genome/chr17.fa ./resources/genome/chr17_ref_bowtie_indexed
+\f2\fs22 \
+
+\f0\fs26 	```\
+\
+
+\f1\b 09/14/2016\
+
+\f0\b0 \
+## File conversions\
+** Convert sam file to bam file **\
+\
+	\'91\'92\'92\{sh\}\
+	samtools view -Sb file.sam > file.bam\
+\
+	Submit the job on gcc server using the command\
+	\
+
+\f1\b 09/15/2016\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\b0\fs24 \cf0 wget http://support.illumina.com/content/dam/illumina-support/documents/documentation/chemistry_documentation/samplepreps_nextera/nexterarapidcapture/nexterarapidcapture_exome_targetedregions_v1.2.bed\
+\
+\
+
+\f1\b 09/28/2016 (Assignment 4)
+\f0\b0 \
+\
+__Verifying the variants called (using our pipeline) with the GIAB_highconf_vcf calls__\
+\
+Variants that fall into the regions of interest (gene panel) were pulled out from the NA12878_GIAB_highconf.vcf were extracted using the following command\
+\
+	```\{sh\}\
+	/home/vagrant/ahcg_pipeline/lib/bedtools2/bin/bedtools intersect -header -a NA12878_GIAB_highconf.vcf -b ./cancer_geneList_coordinates_noChr.txt > GIAB_variantsCalled\
+	\'91\'92\'92\
+\
+From our pipeline:\
+\
+	```\{sh\}\
+	/home/vagrant/ahcg_pipeline/lib/bedtools2/bin/bedtools intersect -header -a NA12878_exome_variants.vcf -b ./	cancer_geneList_coordinates.txt > NA12878_exome_variants_called\
+	\'91\'92\'92\
+To get rid off \'93chr\'94 from each line of the VCF file:\
+\
+	```\{sh\}\
+	awk '\{gsub(/^chr/,""); print\}' NA12878_exome_variants_called > no_chr.NA12878_exome.vcf\
+	```\
+\
+To pull out the variants that are common to both the VCF files (ours vs GIAM_highconf): \
+\
+	```\{sh\}\
+	/home/vagrant/ahcg_pipeline/lib/bedtools2/bin/bedtools intersect -header -a GIAB_variantsCalled -b 	no_chr.NA12878_exome.vcf > intersect.vcf\
+	```\
+\
+
+\f1\b November 2016
+\f0\b0 \
+\pard\pardeftab720\partightenfactor0
+
+\fs26 \cf0 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \
+## Extract sequences for the gene of interest: BRCA1\
+\
+Download the required \'93gene coordinates file\'94 for hg19\
+	\
+	```\{sh\}\
+	wget http://vannberg.biology.gatech.edu/data/ahcg2016/reference_genome/hg19_refGene.txt\
+	```\
+Find BRCA1 gene in gene coordinate file\
+	```\{sh\}\
+	grep BRCA1 hg19_refGene.txt\
+	```\
+There are 7 different BRCA1 transcript, select the one you want (whats been studied exclusively in the literature)\
+		Decided to go with the transcript ID NM_007294 for BRCA1\
+\
+	```\{sh\}\
+	NM_007294\
+	https://dnasu.org/DNASU/AdvancedSearchOptions.do\
+	```\
+	\
+I wrote a script (parse.py) with the help of Cai and Hari to create bed file from the selected transcript ID NM_007294 (BED file format = Chr ExonStart ExonEnd)\
+\
+	```\{sh\}\
+	python parse.py hg19_refGene.txt NM_007294.bed \
+	```\
+To extract sequences from original reference file using the bed file\
+\
+	```\{sh\}\
+	bedtools getfasta -s -fi ./resources/genome/hg19.fa -bed NM_007294.bed -fo NM_007294.out\
+	```\
+\
+\pard\pardeftab720\qc\partightenfactor0
+\cf0  
+\f1\b Calling variants from NIST's NA12878
+\f0\b0 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \
+Instead of starting with the raw FASTQ files, we\'92re starting with the BAM files for NIST NA12878 that Shashi uploaded\
+\
+	```\{sh\}\
+	wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/Garvan_NA12878_HG001_HiSeq_Exome/project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878.bwa.markDuplicates.bam\
+	wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/Garvan_NA12878_HG001_HiSeq_Exome/project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_2_NA12878.bwa.markDuplicates.bam\
+	wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/Garvan_NA12878_HG001_HiSeq_Exome/project.NIST_NIST7086_H7AP8ADXX_CGTACTAG_1_NA12878.bwa.markDuplicates.bam\
+	wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/Garvan_NA12878_HG001_HiSeq_Exome/project.NIST_NIST7086_H7AP8ADXX_CGTACTAG_2_NA12878.bwa.markDuplicates.bam\
+	```\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 \
+Then all the 4 files were merged to increase the total number of reads which thus improves the accuracy of variant calling, by using the command\
+\
+	\'91\'92\'92\{sh\}\
+	samtools merge <output.bam> <input.bam1> \'85\'85 <input.bamN>\
+	\'91\'92\'92\
+Extracting reads mapping to a region of interest (BRCA1, using genomic coordinates as BED file)\
+\
+	\'91\'92\'92\{sh\}\
+	samtools view -L <bed file> -b -o <output bam file> <input bam file>\
+	\'91\'92\'92\
+Note: _-b just specifies that the output needs to be a bam file_\
+\
+\pard\pardeftab720\partightenfactor0
+\cf0 Then the output.bam file from above (BRCA1 region extracted from the merged bam file) is then converted to fastq using bedtools\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf0 \
+	```\{sh\}\
+	bedtools bamtofastq -i <input file.bam> -fq <output file.fastq>\
+	```\
+\pard\pardeftab720\partightenfactor0
+\cf0 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \
+## Download gold standard vcf files for NA12878 from Genome in a Bottle Latest Release\
+	\
+	```\{sh\}\
+	wget ftp://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/release/NA12878_HG001/latest/NA12878_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-Solid-10X_CHROM1-X_v3.3_highconf.vcf.gz\
+	```\
+or from illumina\
+	\
+	```\{sh\}\
+	ftp://ussd-ftp.illumina.com/2016-1.0/hg19/small_variants/NA12878/NA12878.vcf.gz\
+	Genome in a Bottle\
+	wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/Garvan_NA12878_HG001_HiSeq_Exome/project.NIST.hc.snps.indels.vcf\
+	```\
+\
+\pard\pardeftab720\qc\partightenfactor0
+
+\f1\b \cf2 STEP II: TO RUN GATK RECALIBRATOR TO FILTER SNPS
+\f0\b0 \cf0 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \
+\pard\pardeftab720\partightenfactor0
+\cf0 ##  
+\f1\b Recalibration of the Generated VCF file
+\f0\b0 \
+- Download the GATK bundle and create tabix indexed files for each bundle\
+\
+	```\{sh\}\
+	wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/hg19/hapmap_3.3.hg19.sites.vcf.gz\
+	wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/hg19/1000G_omni2.5.hg19.sites.vcf.gz\
+	wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/hg19/1000G_phase1.snps.high_confidence.hg19.sites.vcf.gz\
+	```\
+\
+- To create tabix indexed files for each bundle file\
+\
+	```\{sh\}\
+	gunzip bundle_file.vcf.gz\
+	bzgip bundle_file.vcf\
+	tabix -p vcf bundle_file.vcf.gz\
+	```\
+\
+- 
+\f1\b Run GATK's recalibrator
+\f0\b0  \
+	\
+To generate output.recal file, use the command\
+\
+	```\{sh\}\
+	 java -Xmx4g -jar /home/vagrant/ahcg_pipeline/lib/GenomeAnalysisTK.jar -T VariantRecalibrator -R /home/vagrant/ahcg_pipeline/resources/genome/hg19.fa -input /home/vagrant/ahcg_pipeline/working/NA12878_variants.vcf -resource:hapmap,known=false,training=true,truth=true,prior=15.0 ./hapmap_3.3.hg19.sites.vcf.gz -resource:omni,known=false,training=true,truth=false,prior=12.0 ./1000G_omni2.5.hg19.sites.vcf.gz  -resource:1000G,known=false,training=true,truth=false,prior=10.0 ./1000G_phase1.snps.high_confidence.hg19.sites.vcf.gz -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 /home/vagrant/ahcg_pipeline/resources/dbsnp/dbsnp_138.hg19.vcf.gz -an QD -an MQ -an MQRankSum -an ReadPosRankSum -an FS -an SOR -mode SNP -recalFile output.recal -tranchesFile output.tranches -rscriptFile output.plots.R\
+	```\
+Then using the output.recal from above, apply recalibration and get the filtered VCF file\
+\
+	```\{sh\}\
+	 java -jar /home/vagrant/ahcg_pipeline/lib/GenomeAnalysisTK.jar -T ApplyRecalibration -R /home/vagrant/ahcg_pipeline/resources/genome/hg19.fa -input /home/vagrant/ahcg_pipeline/working/variants.vcf --ts_filter_level 99.0 -tranchesFile output.tranches -recalFile output.recal -mode SNP  -o ./NA12878_variants.filtered.vcf\
+	```\
+
+\f1\b NOTE: 
+\f0\b0 This VCF file above, \'93NA12878_variants.filtered.vcf\'94, is the filtered version  \
+\
+\
+\pard\pardeftab720\qc\partightenfactor0
+
+\f1\b \cf2 STEP III: PER BASE COVERAGE CALCULATION
+\f0\b0\fs24 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\pard\pardeftab720\parhyphenfactor20\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab720\pardirnatural\partightenfactor0
+
+\f1\b \cf0 10/20/2016\
+## Per base coverage calculation\
+\
+
+\f0\b0 Find coverage at each base sequenced using bedtools command:\
+\
+\pard\pardeftab720\partightenfactor0
+
+\fs26 \cf0 \expnd0\expndtw0\kerning0
+\CocoaLigature1 	```\{sh\}\
+	bedtools genomecov -i A.bed -g my.genome\
+	```
+\fs24 \kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab720\pardirnatural\partightenfactor0
+\cf0 or\
+\
+	```\{sh\}\
+	genomeCoverageBed \'97d ibam sortedBamFile.bam -g genome.txt > coverage.txt\
+	```\
+
+\f1\b Note
+\f0\b0 : -d gives coverage per base across the whole genome\
+\
+Take the raw sequence file (FASTQ) and run Shashi\'92s .py script that outputs 7 different files along with the VCF, SAM, & BAM files. To get the coverage use the genomeCoverageBed function on the BAM file (sortedBamFile.bam obtained above)\
+\pard\pardeftab720\partightenfactor0
+
+\fs26 \cf0 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \
+\
+## Collect Clinical Data for BRCA1 and BRCA2 using vcf \
+```\{sh\}\
+python compare_clin_with_vcf.py ./NA12878_variants.vcf BRCA1_brca_exchange_variants.csv BRCA2_brca_exchange_variants.csv > brca_clinical_xref.txt\
+\
+cat brca_clinical_xref.txt | awk 'BEGIN \{FS="\\t"\} \{split($1, coord, ":"); printf("%s\\t%s\\t%s\\t%s\\n", coord[1], coord[2], coord[2], $2)\}' | sed -E -e 's/^([^c].*)/chr\\1/' > brca_clinical_xref.bed\
+```\
+\
+## Run read depth coverage calculator\
+- Extract BRCA1 gene chromosome coordinates from "BRC_OC_gene_list_BED.txt"\
+```\{sh\}\
+grep 'NM_007298' cancerGenes.txt > brca1.bed\
+```\
+\
+- Get brca1 alignments\
+```\{sh\}\
+samtools view -L brca1.bed project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878.bwa.markDuplicates.bam -b > na12878.brca1.bam\
+```\
+\
+- Computes coverage for cancer genes\
+```\{sh\}\
+bedtools genomecov -ibam na12878.brca1.bam -bga > na12878.brca1.bga.bed\
+```\
+\
+- Extract BRCA1 coverage\
+```\{sh\}\
+bedtools intersect -split -a na12878.brca1.bga.bed -b brca1.bed -bed > brca1.final.bed\
+```\
+\
+- Calculate the read depth\
+```\{sh\}\
+awk '\{printf("%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n",$1,$2,$3,$4,$10,$6)\}' brca1.final.bed > brca1.coverage_final.bed\
+\
+bedtools intersect -a brca1.final.bed -b brca_clinical_xref.bed -wo > brca1_clinical_final.bed\
+\
+cat brca_clinical_nonbenign_final.bed | cut -f4,5,7,8,10\
+```\
+\
+\pard\pardeftab720\qc\partightenfactor0
+\cf4 \cb5 ## 
+\f1\b Dilated cardiomyopathy project
+\f0\b0 \cf0 \cb1 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \
+List of clinically relevant genes (from literature search:\
+	\
+	```\{sh\}\
+	LMNA		NM_170707\
+	MYBPC3	NM_000256\
+	MYH7		NM_000257\
+	MYH6		NM_002471\
+	SCN5A	NM_198056\
+	TNNT2	NM_001001430\
+	```\
+Control (2) and Patient (4) files (.bam and .bai) are downloaded as follows\
+\
+	```\{sh\}\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenCo001DNA/Control1_RG_MD_IR_BQ.bam\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenCo001DNA/Control1_RG_MD_IR_BQ.bai\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenCo002DNA/Control2_RG_MD_IR_BQ.bam\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenCo003DNA/Control2_RG_MD_IR_BQ.bai\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenPa001DNA/Patient6_RG_MD_IR_BQ.bam\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenPa001DNA/Patient1_RG_MD_IR_BQ.bai\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenPa002DNA/Patient2_RG_MD_IR_BQ.bam\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenPa002DNA/Patient2_RG_MD_IR_BQ.bai\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenPa003DNA/Patient3_RG_MD_IR_BQ.bam\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenPa003DNA/Patient3_RG_MD_IR_BQ.bai\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenPa004DNA/Patient4_RG_MD_IR_BQ.bam\
+	wget http://vannberg.biology.gatech.edu/data/DCM/MenPa004DNA/Patient4_RG_MD_IR_BQ.bai\
+	```\
+\
+
+\f1\b NOTE: 
+\f0\b0 Ran master script (as described above for BRCA1) to generate variants and to get coverage info\
+\
+	```\{sh\}\
+	./master_variantAnalysis.sh [-h] -r hg19_reference -g gene_list -b BAM_file -v goldStandard_variants(not mandatory) -o output_directory\
+	``` \
+\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b \cf0 End of Class:
+\f0\b0 \
+Since I don\'92t have any space to export my vagrant onto my desktop, then upload it to the server, I just pushed my entire \'93ahcg_pipeline\'94 to Dr. Vannberg\'92s server using the \'93scp\'94 command\
+\
+	```\{sh\}\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 	scp -r ahcg_pipeline/ hsomineni3@gpuvannberg.biology.gatech.edu:~/data/\
+\pard\pardeftab720\partightenfactor0
+\cf0 \expnd0\expndtw0\kerning0
+\CocoaLigature1 	```}
